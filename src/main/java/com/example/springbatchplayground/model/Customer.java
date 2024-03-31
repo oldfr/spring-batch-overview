@@ -1,21 +1,19 @@
 package com.example.springbatchplayground.model;
 
-import javax.batch.api.chunk.ItemReader;
-
 public class Customer {
 
 
     private String Id;
     private String name;
-    private String birthDay;
+    private String department;
 
     public Customer() {
     }
 
-    public Customer(String id, String name, String birthDay) {
+    public Customer(String id, String name, String department) {
         Id = id;
         this.name = name;
-        this.birthDay = birthDay;
+        this.department = department;
     }
 
     public String getId() {
@@ -34,12 +32,12 @@ public class Customer {
         this.name = name;
     }
 
-    public String getBirthDay() {
-        return birthDay;
+    public String getDepartment() {
+        return department;
     }
 
-    public void setBirthDay(String birthDay) {
-        this.birthDay = birthDay;
+    public void setDepartment(String department) {
+        this.department = department;
     }
 
     @Override
@@ -47,7 +45,7 @@ public class Customer {
         return "Customer{" +
                 "Id='" + Id + '\'' +
                 ", name='" + name + '\'' +
-                ", birthDay='" + birthDay + '\'' +
+                ", birthDay='" + department + '\'' +
                 '}';
     }
 }

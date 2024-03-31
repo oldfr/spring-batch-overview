@@ -4,6 +4,7 @@ import com.example.springbatchplayground.steps.CustomerItemReader;
 import com.example.springbatchplayground.steps.CustomerItemWriter;
 import com.example.springbatchplayground.model.Customer;
 import com.example.springbatchplayground.steps.CustomerItemProcessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -13,13 +14,26 @@ import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.SimpleJobLauncher;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.*;
+import org.springframework.batch.item.file.FlatFileItemWriter;
+import org.springframework.batch.item.file.builder.FlatFileItemWriterBuilder;
+import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
 import org.springframework.batch.item.support.CompositeItemProcessor;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 @Configuration
 public class JobConfig {
@@ -29,25 +43,38 @@ public class JobConfig {
     @Autowired
     private StepBuilderFactory stepBuilders;
 
+/*    @Qualifier
+    CustomerItemWriter customerItemWriter;*/
+
+
     @Bean("firstBatchJob")
     public Job customerReportJob() throws Exception {
         return jobBuilders.get("customerReportJob")
-                .start(taskletStep())
+                .start(taskletStep("inputCustomerList.json"))
                 .next(chunkStep())
                 .build();
     }
 
     @Bean
-    public Step taskletStep() {
+    public Step taskletStep(String fileName) {
         return stepBuilders.get("taskletStep")
-                .tasklet(tasklet())
+                .tasklet(tasklet(fileName))
                 .build();
     }
 
     @Bean
-    public Tasklet tasklet() {
+    public Tasklet tasklet(String fileName) {
         return (contribution, chunkContext) -> {
             System.out.println("Hello from tasklet");
+            List<Customer> customers = Arrays.asList(new ObjectMapper().readValue(new ClassPathResource(fileName).getFile(), Customer[].class));
+            Collections.sort(customers, Comparator.comparing(Customer::getId));
+            File file = new File("src/main/resources/sortedCustomerList.json");
+            if(!file.exists()){
+                System.out.println("FILE DOES NOT EXISTS. CREATED NOW");
+                file.createNewFile();
+            }
+            System.out.println("after sorting:"+customers);
+            Files.writeString(Path.of(file.getPath()),new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(customers));
             return RepeatStatus.FINISHED;
         };
     }
@@ -66,13 +93,14 @@ public class JobConfig {
                 .reader(reader())
                 .processor(processor())
                 .writer(writer())
+//                .stream(dupItemWriter())
                 .build();
     }
 
     @StepScope
     @Bean
     public ItemReader<Customer> reader() throws IOException {
-        return new CustomerItemReader("test.json");
+        return new CustomerItemReader("sortedCustomerList.json");
     }
 
     @StepScope
@@ -88,4 +116,16 @@ public class JobConfig {
         processor.setDelegates(Arrays.asList(new CustomerItemProcessor()));
         return processor;
     }
+
+/*    @Bean(name = "duplicateItemWriter")
+    public FlatFileItemWriter<Customer> dupItemWriter(){
+
+        return new FlatFileItemWriterBuilder<Customer>()
+                .name("duplicateItemWriter")
+                .resource(new FileSystemResource("src/main/resources/sortedCustomerList.json"))
+                .lineAggregator(new PassThroughLineAggregator<>())
+                .append(true)
+                .shouldDeleteIfExists(true)
+                .build();
+    }*/
 }

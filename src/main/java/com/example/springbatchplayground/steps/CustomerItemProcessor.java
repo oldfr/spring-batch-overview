@@ -7,6 +7,8 @@ public class CustomerItemProcessor implements ItemProcessor<Customer, Customer> 
 
     @Override
     public Customer process(Customer customer) throws Exception {
-        return customer;
+        // process the customer
+        Customer customerUpdated = new Customer("CUST_"+customer.getId(), customer.getName(),customer.getDepartment());
+        return customerUpdated;
     }
 }

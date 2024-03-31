@@ -1,0 +1,13 @@
+[ {
+  "name" : "Anki",
+  "department" : "IT",
+  "id" : "4"
+}, {
+  "name" : "Adi",
+  "department" : "Sales",
+  "id" : "1"
+}, {
+  "name" : "Raj",
+  "department" : "IT",
+  "id" : "3"
+} ]

@@ -1,9 +1,9 @@
 package com.example.springbatchplayground.config;
 
-import com.example.springbatchplayground.steps.CustomerItemReader;
-import com.example.springbatchplayground.steps.CustomerItemWriter;
 import com.example.springbatchplayground.model.Customer;
 import com.example.springbatchplayground.steps.CustomerItemProcessor;
+import com.example.springbatchplayground.steps.CustomerItemReader;
+import com.example.springbatchplayground.steps.CustomerItemWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -13,19 +13,19 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.SimpleJobLauncher;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.item.*;
-import org.springframework.batch.item.file.FlatFileItemWriter;
-import org.springframework.batch.item.file.builder.FlatFileItemWriterBuilder;
-import org.springframework.batch.item.file.transform.PassThroughLineAggregator;
+import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemReader;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.json.JacksonJsonObjectMarshaller;
+import org.springframework.batch.item.json.JsonFileItemWriter;
+import org.springframework.batch.item.json.builder.JsonFileItemWriterBuilder;
 import org.springframework.batch.item.support.CompositeItemProcessor;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,10 +42,6 @@ public class JobConfig {
 
     @Autowired
     private StepBuilderFactory stepBuilders;
-
-/*    @Qualifier
-    CustomerItemWriter customerItemWriter;*/
-
 
     @Bean("firstBatchJob")
     public Job customerReportJob() throws Exception {
@@ -93,7 +89,10 @@ public class JobConfig {
                 .reader(reader())
                 .processor(processor())
                 .writer(writer())
-//                .stream(dupItemWriter())
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(Integer.parseInt("100"))
+                .stream(dupItemWriter())
                 .build();
     }
 
@@ -117,15 +116,16 @@ public class JobConfig {
         return processor;
     }
 
-/*    @Bean(name = "duplicateItemWriter")
-    public FlatFileItemWriter<Customer> dupItemWriter(){
+    @Bean(name = "duplicateItemWriter")
+    public JsonFileItemWriter<Customer> dupItemWriter(){
 
-        return new FlatFileItemWriterBuilder<Customer>()
+        return new JsonFileItemWriterBuilder<Customer>()
                 .name("duplicateItemWriter")
-                .resource(new FileSystemResource("src/main/resources/sortedCustomerList.json"))
-                .lineAggregator(new PassThroughLineAggregator<>())
-                .append(true)
+                .resource(new FileSystemResource("src/main/resources/finalCustomerList.json"))
+                .jsonObjectMarshaller(new JacksonJsonObjectMarshaller<>())
+//                .lineAggregator(new PassThroughLineAggregator<>())
+                .append(false)
                 .shouldDeleteIfExists(true)
                 .build();
-    }*/
+    }
 }

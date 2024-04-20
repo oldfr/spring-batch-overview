@@ -22,7 +22,6 @@ public class CustomerItemWriter implements ItemWriter<Customer>, Closeable {
 
     @Override
     public void write(List<? extends Customer> list) throws Exception {
-//        writer.write(list.toString());
         System.out.println("writing final customer list:"+list);
         writer.write(list);
         System.out.println("writing to final file completed");

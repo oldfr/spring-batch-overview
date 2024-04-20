@@ -2,15 +2,21 @@ package com.example.springbatchplayground.steps;
 
 import com.example.springbatchplayground.model.Customer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.NonTransientResourceException;
 import org.springframework.batch.item.ParseException;
 import org.springframework.batch.item.UnexpectedInputException;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Component;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+@Component
+@StepScope
 public class CustomerItemReader implements ItemReader<Customer> {
 
     private final String filename;
@@ -20,6 +26,10 @@ public class CustomerItemReader implements ItemReader<Customer> {
 
     public CustomerItemReader(final String filename) throws IOException {
         this.filename = filename;
+      /*  File file = new File(filename);
+        if (!file.exists()) {
+            file.createNewFile();
+        }*/
         initialize();
     }
 
@@ -29,7 +39,7 @@ public class CustomerItemReader implements ItemReader<Customer> {
     }
 
     @Override
-    public Customer read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
+    public Customer read() throws UnexpectedInputException, ParseException, NonTransientResourceException {
         Customer nextCustomer = null;
 
         if (nextCustomerIndex < customers.size()) {
@@ -41,6 +51,5 @@ public class CustomerItemReader implements ItemReader<Customer> {
         }
 
         return nextCustomer;
-        //        return customers().get(0);
     }
 }

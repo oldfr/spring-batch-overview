@@ -6,6 +6,8 @@ import com.example.springbatchplayground.steps.CustomerItemReader;
 import com.example.springbatchplayground.steps.CustomerItemWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
@@ -22,6 +24,8 @@ import org.springframework.batch.item.json.builder.JsonFileItemWriterBuilder;
 import org.springframework.batch.item.support.CompositeItemProcessor;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -44,27 +48,38 @@ public class JobConfig {
     private StepBuilderFactory stepBuilders;
 
     @Bean("firstBatchJob")
-    public Job customerReportJob() throws Exception {
+    public Job customerReportJob(@Qualifier("TaskletStep") Step taskletStep) throws Exception {
         return jobBuilders.get("customerReportJob")
-                .start(taskletStep("inputCustomerList.json"))
+                .start(taskletStep)
                 .next(chunkStep())
                 .build();
     }
 
-    @Bean
-    public Step taskletStep(String fileName) {
+    @Bean("TaskletStep")
+    public Step taskletStep(@Qualifier("Tasklet") Tasklet tasklet) {
         return stepBuilders.get("taskletStep")
-                .tasklet(tasklet(fileName))
+                .tasklet(tasklet)
                 .build();
     }
 
-    @Bean
-    public Tasklet tasklet(String fileName) {
+    @Bean("JobParameters")
+    public JobParameters getJobParameters() {
+        JobParametersBuilder jobParametersBuilder = new JobParametersBuilder();
+        jobParametersBuilder.addString("inputFileLocation", "inputCustomerList.json");
+        jobParametersBuilder.addString("sortedFileLocation", "src/main/resources/sortedCustomerList.json");
+//        jobParametersBuilder.addDate("date", <date_from_cmd_line>);
+        return jobParametersBuilder.toJobParameters();
+    }
+
+    @Bean("Tasklet")
+    @StepScope
+    public Tasklet tasklet(@Qualifier("JobParameters") JobParameters jobParameters) {
         return (contribution, chunkContext) -> {
             System.out.println("Hello from tasklet");
-            List<Customer> customers = Arrays.asList(new ObjectMapper().readValue(new ClassPathResource(fileName).getFile(), Customer[].class));
+//            List<Customer> customers = Arrays.asList(new ObjectMapper().readValue(new ClassPathResource(fileName).getFile(), Customer[].class));
+            List<Customer> customers = Arrays.asList(new ObjectMapper().readValue(new ClassPathResource(jobParameters.getParameters().get("inputFileLocation").toString()).getFile(), Customer[].class));
             Collections.sort(customers, Comparator.comparing(Customer::getId));
-            File file = new File("src/main/resources/sortedCustomerList.json");
+            File file = new File(jobParameters.getParameters().get("sortedFileLocation").toString());
             if(!file.exists()){
                 System.out.println("FILE DOES NOT EXISTS. CREATED NOW");
                 file.createNewFile();
@@ -118,12 +133,10 @@ public class JobConfig {
 
     @Bean(name = "duplicateItemWriter")
     public JsonFileItemWriter<Customer> dupItemWriter(){
-
         return new JsonFileItemWriterBuilder<Customer>()
                 .name("duplicateItemWriter")
                 .resource(new FileSystemResource("src/main/resources/finalCustomerList.json"))
                 .jsonObjectMarshaller(new JacksonJsonObjectMarshaller<>())
-//                .lineAggregator(new PassThroughLineAggregator<>())
                 .append(false)
                 .shouldDeleteIfExists(true)
                 .build();

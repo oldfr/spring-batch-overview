@@ -7,9 +7,7 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.NonTransientResourceException;
 import org.springframework.batch.item.ParseException;
 import org.springframework.batch.item.UnexpectedInputException;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -26,15 +24,15 @@ public class CustomerItemReader implements ItemReader<Customer> {
 
     public CustomerItemReader(final String filename) throws IOException {
         this.filename = filename;
-      /*  File file = new File(filename);
-        if (!file.exists()) {
-            file.createNewFile();
-        }*/
         initialize();
     }
 
     private void initialize() throws IOException {
-        customers = Arrays.asList(new ObjectMapper().readValue(new ClassPathResource(filename).getFile(), Customer[].class));
+        File newFile = new File(filename);
+        if(!newFile.exists()) {
+            newFile.createNewFile();
+        }
+        customers = Arrays.asList(new ObjectMapper().readValue(newFile, Customer[].class));
         nextCustomerIndex = 0;
     }
 

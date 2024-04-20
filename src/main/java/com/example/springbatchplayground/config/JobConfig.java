@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import java.io.File;
@@ -40,6 +41,7 @@ import java.util.Comparator;
 import java.util.List;
 
 @Configuration
+//@DependsOn("mainConfig")
 public class JobConfig {
     @Autowired
     private JobBuilderFactory jobBuilders;
@@ -114,7 +116,7 @@ public class JobConfig {
     @StepScope
     @Bean
     public ItemReader<Customer> reader() throws IOException {
-        return new CustomerItemReader("sortedCustomerList.json");
+        return new CustomerItemReader("src/main/resources/sortedCustomerList.json");
     }
 
     @StepScope

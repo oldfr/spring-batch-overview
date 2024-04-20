@@ -1,6 +1,7 @@
 package com.example.springbatchplayground.config;
 
 import com.example.springbatchplayground.model.Customer;
+import com.example.springbatchplayground.model.PremiumCustomer;
 import com.example.springbatchplayground.steps.CustomerItemProcessor;
 import com.example.springbatchplayground.steps.CustomerItemReader;
 import com.example.springbatchplayground.steps.CustomerItemWriter;
@@ -69,7 +70,6 @@ public class JobConfig {
         JobParametersBuilder jobParametersBuilder = new JobParametersBuilder();
         jobParametersBuilder.addString("inputFileLocation", "inputCustomerList.json");
         jobParametersBuilder.addString("sortedFileLocation", "src/main/resources/sortedCustomerList.json");
-//        jobParametersBuilder.addDate("date", <date_from_cmd_line>);
         return jobParametersBuilder.toJobParameters();
     }
 
@@ -77,8 +77,7 @@ public class JobConfig {
     @StepScope
     public Tasklet tasklet(@Qualifier("JobParameters") JobParameters jobParameters) {
         return (contribution, chunkContext) -> {
-            System.out.println("Hello from tasklet");
-//            List<Customer> customers = Arrays.asList(new ObjectMapper().readValue(new ClassPathResource(fileName).getFile(), Customer[].class));
+            System.out.println("Starting tasklet step");
             List<Customer> customers = Arrays.asList(new ObjectMapper().readValue(new ClassPathResource(jobParameters.getParameters().get("inputFileLocation").toString()).getFile(), Customer[].class));
             Collections.sort(customers, Comparator.comparing(Customer::getId));
             File file = new File(jobParameters.getParameters().get("sortedFileLocation").toString());
@@ -102,14 +101,11 @@ public class JobConfig {
     @Bean
     public Step chunkStep() throws Exception {
         return stepBuilders.get("chunkStep")
-                .<Customer, Customer>chunk(3)
+                .<Customer, PremiumCustomer>chunk(3)
                 .reader(reader())
                 .processor(processor())
                 .writer(writer())
-                .faultTolerant()
-                .skip(Exception.class)
-                .skipLimit(Integer.parseInt("100"))
-                .stream(dupItemWriter())
+                .stream(dupItemWriter())// stream of writer to open it before writing to it
                 .build();
     }
 
@@ -121,21 +117,21 @@ public class JobConfig {
 
     @StepScope
     @Bean
-    public ItemWriter<Customer> writer() throws Exception {
+    public ItemWriter<PremiumCustomer> writer() throws Exception {
         return new CustomerItemWriter();
     }
 
     @StepScope
     @Bean
-    public ItemProcessor<Customer, Customer> processor() {
-        final CompositeItemProcessor<Customer, Customer> processor = new CompositeItemProcessor<>();
+    public ItemProcessor<Customer, PremiumCustomer> processor() {
+        final CompositeItemProcessor<Customer, PremiumCustomer> processor = new CompositeItemProcessor<>();
         processor.setDelegates(Arrays.asList(new CustomerItemProcessor()));
         return processor;
     }
 
     @Bean(name = "duplicateItemWriter")
-    public JsonFileItemWriter<Customer> dupItemWriter(){
-        return new JsonFileItemWriterBuilder<Customer>()
+    public JsonFileItemWriter<PremiumCustomer> dupItemWriter(){
+        return new JsonFileItemWriterBuilder<PremiumCustomer>()
                 .name("duplicateItemWriter")
                 .resource(new FileSystemResource("src/main/resources/finalCustomerList.json"))
                 .jsonObjectMarshaller(new JacksonJsonObjectMarshaller<>())
